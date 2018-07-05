@@ -45,7 +45,7 @@ extern int func;
 extern int maxpcibus;
 extern char pciname[LFDK_MAX_PATH];
 
-int rpp = 20; // 20 records per page
+int rpp = 20; /* 20 records per page */
 int lightbar = 0;
 
 int ReadLine(int fd)
@@ -61,9 +61,7 @@ int ReadLine(int fd)
 
 		if (buf == '#') {
 
-			//
-			// Skip comment
-			//
+			/* Skip comment */
 			while (read(fd, &buf, 1) && (buf != '\n'))
 				;
 			return -1;
@@ -95,18 +93,14 @@ int CompareID(unsigned int id)
 	char idstr[5];
 	char temp[5];
 
-	//
-	// Read ID string
-	//
+	/* Read ID string */
 	for (i = 0; i < 4; i++) {
 
 		idstr[i] = read_buffer[i];
 	}
 	idstr[i] = 0;
 
-	//
-	// Convert ASCII to binary
-	//
+	/* Convert ASCII to binary */
 	snprintf(temp, 5, "%4.4x", id);
 
 	return strncmp(temp, idstr, 4);
@@ -129,9 +123,7 @@ void GetVendorAndDeviceTexts(int venid, int devid, char *ventxt, char *devtxt)
 
 	for (findven = 0, done = 0;;) {
 
-		//
-		// Parse PCI Database file
-		//
+		/* Parse PCI Database file */
 		switch (tabs = ReadLine(fd)) {
 
 		case 0:
@@ -164,9 +156,7 @@ void GetVendorAndDeviceTexts(int venid, int devid, char *ventxt, char *devtxt)
 			break;
 		}
 
-		//
-		// End of File
-		//
+		/* End of File */
 		if (tabs == -2) {
 
 			break;
@@ -182,9 +172,7 @@ void ScanPCIDevice(int fd)
 	int i;
 	unsigned char bus = 0, dev = 0, fun = 0;
 
-	//
-	// Scan PCI memory space
-	//
+	/* Scan PCI memory space */
 	last_index = 0;
 	for (bus = 0; bus < maxpcibus; bus++) {
 
@@ -208,9 +196,7 @@ void ScanPCIDevice(int fd)
 
 				if ((lfdd_pci_data.buf & 0xffff) != 0xffff) {
 
-					//
-					// Yes, it's a PCI device
-					//
+					/* Yes, it's a PCI device */
 					lfdd_pci_list[last_index].bus = bus;
 					lfdd_pci_list[last_index].dev = dev;
 					lfdd_pci_list[last_index].fun = fun;
@@ -218,9 +204,7 @@ void ScanPCIDevice(int fd)
 					    (unsigned short int)
 						lfdd_pci_data.buf;
 
-					//
-					// Read and record Device ID
-					//
+					/* Read and record Device ID */
 					lfdd_pci_data.reg += 0x02;
 					LFDD_IOCTL(fd, LFDD_PCI_READ_WORD,
 						   lfdd_pci_data);
@@ -228,18 +212,14 @@ void ScanPCIDevice(int fd)
 					    (unsigned short int)
 						lfdd_pci_data.buf;
 
-					//
-					// Get Texts
-					//
+					/* Get Texts */
 					GetVendorAndDeviceTexts(
 					    lfdd_pci_list[last_index].venid,
 					    lfdd_pci_list[last_index].devid,
 					    lfdd_pci_list[last_index].ventxt,
 					    lfdd_pci_list[last_index].devtxt);
 
-					//
-					// Move to next record
-					//
+					/* Move to next record */
 					last_index++;
 				}
 			}
@@ -363,9 +343,7 @@ void PrintPCIScreen(int fd)
 		}
 	}
 
-	//
-	// Print Device Name
-	//
+	/* Print Device Name */
 	PrintFixedWin(PCIScreen, ven, 1, 70, 1, 1, CYAN_BLUE, "%70s", " ");
 	if (lfdd_pci_list[curr_index].ventxt[0]) {
 
@@ -390,35 +368,27 @@ void PrintPCIScreen(int fd)
 			      "Unknown Device");
 	}
 
-	//
-	// Print Offset Text
-	//
+	/* Print Offset Text */
 	PrintFixedWin(PCIScreen, offset, 17, 52, 4, 1, RED_BLUE,
 		      "0000 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E "
 		      "0F0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n"
 		      "0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0");
 
-	//
-	// Print PCI bus, device, function number
-	//
+	/* Print PCI bus, device, function number */
 	PrintFixedWin(
 	    PCIScreen, info, 1, 47, 22, 0, WHITE_BLUE,
 	    "Type: PCI    Bus %2.2X    Device %2.2X    Function %2.2X",
 	    lfdd_pci_list[curr_index].bus, lfdd_pci_list[curr_index].dev,
 	    lfdd_pci_list[curr_index].fun);
 
-	//
-	// Read PCI configuration space 256 bytes
-	//
+	/* Read PCI configuration space 256 bytes */
 	lfdd_pci_data.bus = lfdd_pci_list[curr_index].bus;
 	lfdd_pci_data.dev = lfdd_pci_list[curr_index].dev;
 	lfdd_pci_data.fun = lfdd_pci_list[curr_index].fun;
 	lfdd_pci_data.reg = 0;
 	LFDD_IOCTL(fd, LFDD_PCI_READ_256BYTE, lfdd_pci_data);
 
-	//
-	// Print PCI information
-	//
+	/* Print PCI information */
 	if (!PCIScreen.rtitle) {
 
 		PCIScreen.rtitle = newwin(17, 24, 4, 56);
@@ -452,9 +422,7 @@ void PrintPCIScreen(int fd)
 	wprintw(PCIScreen.rtitle, "ROM: 00000000\n");
 	wattrset(PCIScreen.rtitle, A_NORMAL);
 
-	//
-	// Print 256bytes PCI Configuration Space
-	//
+	/* Print 256bytes PCI Configuration Space */
 	if (!PCIScreen.value) {
 
 		PCIScreen.value = newwin(17, 47, 5, 6);
@@ -468,9 +436,7 @@ void PrintPCIScreen(int fd)
 
 		for (j = 0; j < LFDK_BYTE_PER_LINE; j++) {
 
-			//
-			// Change Color Pair
-			//
+			/* Change Color Pair */
 			if (y == j && x == i) {
 
 				if (input) {
@@ -508,9 +474,7 @@ void PrintPCIScreen(int fd)
 					 COLOR_PAIR(WHITE_BLUE) | A_BOLD);
 			}
 
-			//
-			// Handle input display
-			//
+			/* Handle input display */
 			if (y == j && x == i) {
 
 				if (input) {
@@ -534,14 +498,10 @@ void PrintPCIScreen(int fd)
 						      j]);
 			}
 
-			//
-			// End of color pair
-			//
+			/* End of color pair */
 			wattrset(PCIScreen.value, A_NORMAL);
 
-			//
-			// Move to next byte
-			//
+			/* Move to next byte */
 			if (j != 15) {
 
 				wprintw(PCIScreen.value, " ");
@@ -563,9 +523,7 @@ void PrintPCILScreen(void)
 
 	int i;
 
-	//
-	// Adjust Light Bar and curr_index
-	//
+	/* Adjust Light Bar and curr_index */
 	if ((curr_index + rpp) > last_index) {
 
 		curr_index = last_index - rpp;
@@ -640,16 +598,12 @@ void PrintPCILScreen(void)
 		goto pcil_done;
 	}
 
-	//
-	// Print Title
-	//
+	/* Print Title */
 	PrintFixedWin(PCILScreen, title, 1, 80, 1, 0, BLACK_GREEN,
 		      "Name                                              "
 		      "Vendor  Device  Bus# Dev# Fun#");
 
-	//
-	// Print PCI device name
-	//
+	/* Print PCI device name */
 	if (!PCILScreen.devname) {
 
 		PCILScreen.devname = newwin(20, 50, 2, 0);

@@ -112,9 +112,7 @@ int main(int argc, char **argv)
 	time_t timer;
 	int last_sec;
 
-	//
-	// Initialize & set default value
-	//
+	/* Initialize & set default value */
 	strncpy(device, LFDD_DEFAULT_PATH, LFDK_MAX_PATH);
 	strncpy(pciname, LFDK_DEFAULT_PCINAME, LFDK_MAX_PATH);
 
@@ -122,17 +120,13 @@ int main(int argc, char **argv)
 
 		switch (c) {
 
-		//
-		// Change default path of device
-		//
+		/* Change default path of device */
 		case 'd':
 
 			strncpy(device, optarg, LFDK_MAX_PATH);
 			break;
 
-		//
-		// Change default path of PCI name database
-		//
+		/* Change default path of PCI name database */
 		case 'n':
 
 			strncpy(pciname, optarg, LFDK_MAX_PATH);
@@ -161,9 +155,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//
-	// Start communicate with LFDD I/O control driver
-	//
+	/* Start communicate with LFDD I/O control driver */
 	fd = open(device, O_RDWR);
 	if (fd < 0) {
 
@@ -171,9 +163,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	//
-	// Enable IO Permission
-	//
+	/* Enable IO Permission */
 	if (ioperm(LFDK_CMOS_IO_START, LFDK_CMOS_IO_END, 1)) {
 
 		fprintf(stderr, "Failed to Execute ioperm()\n");
@@ -181,9 +171,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	//
-	// Ncurse start
-	//
+	/* Ncurse start */
 	initscr();
 	start_color();
 	cbreak();
@@ -192,19 +180,13 @@ int main(int argc, char **argv)
 	keypad(stdscr, 1);
 	curs_set(0);
 
-	//
-	// Initialize color pairs for later use
-	//
+	/* Initialize color pairs for later use */
 	InitColorPairs();
 
-	//
-	// Prepare Base Screen
-	//
+	/* Prepare Base Screen */
 	PrintBaseScreen();
 
-	//
-	// Scan PCI devices
-	//
+	/* Scan PCI devices */
 	ScanPCIDevice(fd);
 
 	for (;;) {
@@ -212,15 +194,11 @@ int main(int argc, char **argv)
 		ibuf = getch();
 		if ((ibuf == 'q') || (ibuf == 'Q')) {
 
-			//
-			// Exit when ESC pressed
-			//
+			/* Exit when ESC pressed */
 			break;
 		}
 
-		//
-		// Major function switch key binding
-		//
+		/* Major function switch key binding */
 		if ((ibuf == 'p') || (ibuf == 'P')) {
 
 			func = PCI_LIST_FUNC;
@@ -271,14 +249,12 @@ int main(int argc, char **argv)
 			}
 		*/
 
-		//
-		// Update timer
-		//
+		/* Update timer */
 		time(&timer);
 		nowtime = localtime(&timer);
 		last_sec = nowtime->tm_sec;
 
-		// Skip redundant update of timer
+		/* Skip redundant update of timer */
 		if (last_sec == nowtime->tm_sec) {
 
 			PrintFixedWin(BaseScreen, time, 1, 8, 23, 71,
@@ -287,9 +263,7 @@ int main(int argc, char **argv)
 				      nowtime->tm_sec);
 		}
 
-		//
-		// Major Functions
-		//
+		/* Major Functions */
 		switch (func) {
 
 		case PCI_DEVICE_FUNC:
@@ -326,9 +300,7 @@ int main(int argc, char **argv)
 			break;
 		}
 
-		//
-		// Refresh Screen
-		//
+		/* Refresh Screen */
 		update_panels();
 		doupdate();
 

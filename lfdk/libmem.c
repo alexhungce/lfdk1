@@ -179,17 +179,13 @@ void PrintMemScreen(int fd)
 		}
 	}
 
-	//
-	// Print Offset Text
-	//
+	/* Print Offset Text */
 	PrintFixedWin(MemScreen, offset, 17, 52, 4, 1, RED_BLUE,
 		      "0000 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E "
 		      "0F0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n"
 		      "0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0");
 
-	//
-	// Print memory address
-	//
+	/* Print memory address */
 	if (!MemScreen.info) {
 
 		MemScreen.info = newwin(1, 47, 22, 0);
@@ -224,9 +220,7 @@ void PrintMemScreen(int fd)
 	wprintw(MemScreen.info, "h");
 	wattrset(MemScreen.info, A_NORMAL);
 
-	//
-	// Read memory space 256 bytes
-	//
+	/* Read memory space 256 bytes */
 	if (enter_mem) {
 
 		memset(lfdd_mem_data.mass_buf, 0xff, LFDD_MASSBUF_SIZE);
@@ -236,9 +230,7 @@ void PrintMemScreen(int fd)
 		LFDD_IOCTL(fd, LFDD_MEM_READ_256BYTE, lfdd_mem_data);
 	}
 
-	//
-	// Print ASCII content
-	//
+	/* Print ASCII content */
 	if (!MemScreen.ascii) {
 
 		MemScreen.ascii = newwin(17, 16, 4, 58);
@@ -268,9 +260,7 @@ void PrintMemScreen(int fd)
 
 	wattrset(MemScreen.ascii, A_NORMAL);
 
-	//
-	// Print 256bytes content
-	//
+	/* Print 256bytes content */
 	if (!MemScreen.value) {
 
 		MemScreen.value = newwin(17, 47, 5, 6);
@@ -284,9 +274,7 @@ void PrintMemScreen(int fd)
 
 		for (j = 0; j < LFDK_BYTE_PER_LINE; j++) {
 
-			//
-			// Change Color Pair
-			//
+			/* Change Color Pair */
 			if (y == j && x == i) {
 
 				if (input) {
@@ -324,9 +312,7 @@ void PrintMemScreen(int fd)
 					 COLOR_PAIR(WHITE_BLUE) | A_BOLD);
 			}
 
-			//
-			// Handle input display
-			//
+			/* Handle input display */
 			if (y == j && x == i) {
 
 				if (input) {
@@ -350,14 +336,10 @@ void PrintMemScreen(int fd)
 						      j]);
 			}
 
-			//
-			// End of color pair
-			//
+			/* End of color pair */
 			wattrset(MemScreen.value, A_NORMAL);
 
-			//
-			// Move to next byte
-			//
+			/* Move to next byte */
 			if (j != 15) {
 
 				wprintw(MemScreen.value, " ");

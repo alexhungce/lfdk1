@@ -14,11 +14,11 @@
  * GNU General Public License for more details.
  *
  */
-#include <linux/module.h>
-#include <linux/init.h>
 #include <linux/errno.h>
-#include <linux/miscdevice.h>
 #include <linux/fcntl.h>
+#include <linux/init.h>
+#include <linux/miscdevice.h>
+#include <linux/module.h>
 #include <linux/proc_fs.h>
 
 #include <linux/delay.h>
@@ -29,45 +29,18 @@
 
 #include "lfdd.h"
 
-
 extern spinlock_t lfdd_lock;
 
+unsigned char lfdd_i2c_read_byte(unsigned int addr) { return 0; }
 
-unsigned char lfdd_i2c_read_byte( unsigned int addr ) {
+unsigned short int lfdd_i2c_read_word(unsigned int addr) { return 0; }
 
-    return 0;
-}
+unsigned int lfdd_i2c_read_dword(unsigned int addr) { return 0; }
 
+void lfdd_i2c_write_byte(unsigned int value, unsigned int addr) {}
 
-unsigned short int lfdd_i2c_read_word( unsigned int addr ) {
+void lfdd_i2c_write_word(unsigned int value, unsigned int addr) {}
 
-	return 0;
-}
+void lfdd_i2c_write_dword(unsigned int value, unsigned int addr) {}
 
-
-unsigned int lfdd_i2c_read_dword( unsigned int addr ) {
-
-    return 0;
-}
-
-
-void lfdd_i2c_write_byte( unsigned int value, unsigned int addr ) {
-
-}
-
-
-void lfdd_i2c_write_word( unsigned int value, unsigned int addr ) {
-
-}
-
-
-void lfdd_i2c_write_dword( unsigned int value, unsigned int addr ) {
-
-}
-
-
-void lfdd_i2c_read_256byte( struct lfdd_i2c_t *pi2c ) { 
-
-}
-
-
+void lfdd_i2c_read_256byte(struct lfdd_i2c_t *pi2c) {}

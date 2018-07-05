@@ -14,15 +14,15 @@
  * GNU General Public License for more details.
  *
  */
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <ncurses.h>
 #include <panel.h>
@@ -30,9 +30,7 @@
 #include "../lfdd/lfdd.h"
 #include "lfdk.h"
 
-
 static BasePanel BaseScreen;
-
 
 int x = 0, y = 0;
 int curr_index = 0, last_index;
@@ -42,320 +40,306 @@ int ibuf;
 char wbuf;
 int func = PCI_DEVICE_FUNC;
 int maxpcibus = 255;
-char pciname[ LFDK_MAX_PATH ];
+char pciname[LFDK_MAX_PATH];
 char enter_mem = 0;
 
+void PrintBaseScreen(void);
 
-void PrintBaseScreen( void );
+static void usage(void)
+{
 
-
-static void usage( void ) {
-
-    fprintf( stderr, "\n"LFDK_VERTEXT"\n" );
-	fprintf( stderr, "Copyright (C) 2006 - 2010, Merck Hung <merckhung@gmail.com>\n" );
-    fprintf( stderr, "Usage: "LFDK_PROGNAME" [-h] [-d /dev/lfdd] [-n ./pci.ids] [-b 255]\n" );
-    fprintf( stderr, "\t-n\tFilename of PCI Name Database, default is /usr/share/misc/pci.ids\n" );
-    fprintf( stderr, "\t-d\tDevice name of Linux Firmware Debug Driver, default is /dev/lfdd\n" );
-    fprintf( stderr, "\t-b\tMaximum PCI Bus number to scan, default is 255\n" );
-    fprintf( stderr, "\t-h\tprint this message.\n");
-    fprintf( stderr, "\n");
+	fprintf(stderr, "\n" LFDK_VERTEXT "\n");
+	fprintf(
+	    stderr,
+	    "Copyright (C) 2006 - 2010, Merck Hung <merckhung@gmail.com>\n");
+	fprintf(stderr, "Usage: " LFDK_PROGNAME
+			" [-h] [-d /dev/lfdd] [-n ./pci.ids] [-b 255]\n");
+	fprintf(stderr, "\t-n\tFilename of PCI Name Database, default is "
+			"/usr/share/misc/pci.ids\n");
+	fprintf(stderr, "\t-d\tDevice name of Linux Firmware Debug Driver, "
+			"default is /dev/lfdd\n");
+	fprintf(stderr,
+		"\t-b\tMaximum PCI Bus number to scan, default is 255\n");
+	fprintf(stderr, "\t-h\tprint this message.\n");
+	fprintf(stderr, "\n");
 }
 
+void InitColorPairs(void)
+{
 
-void InitColorPairs( void ) {
-
-    init_pair( WHITE_RED, COLOR_WHITE, COLOR_RED );
-    init_pair( WHITE_BLUE, COLOR_WHITE, COLOR_BLUE );
-    init_pair( BLACK_WHITE, COLOR_BLACK, COLOR_WHITE ); 
-    init_pair( CYAN_BLUE, COLOR_CYAN, COLOR_BLUE );
-    init_pair( RED_BLUE, COLOR_RED, COLOR_BLUE );
-    init_pair( YELLOW_BLUE, COLOR_YELLOW, COLOR_BLUE );
-    init_pair( BLACK_GREEN, COLOR_BLACK, COLOR_GREEN );
-    init_pair( BLACK_YELLOW, COLOR_BLACK, COLOR_YELLOW );
-    init_pair( YELLOW_RED, COLOR_YELLOW, COLOR_RED );
-    init_pair( YELLOW_BLACK, COLOR_YELLOW, COLOR_BLACK );
-    init_pair( WHITE_YELLOW, COLOR_WHITE, COLOR_YELLOW );
+	init_pair(WHITE_RED, COLOR_WHITE, COLOR_RED);
+	init_pair(WHITE_BLUE, COLOR_WHITE, COLOR_BLUE);
+	init_pair(BLACK_WHITE, COLOR_BLACK, COLOR_WHITE);
+	init_pair(CYAN_BLUE, COLOR_CYAN, COLOR_BLUE);
+	init_pair(RED_BLUE, COLOR_RED, COLOR_BLUE);
+	init_pair(YELLOW_BLUE, COLOR_YELLOW, COLOR_BLUE);
+	init_pair(BLACK_GREEN, COLOR_BLACK, COLOR_GREEN);
+	init_pair(BLACK_YELLOW, COLOR_BLACK, COLOR_YELLOW);
+	init_pair(YELLOW_RED, COLOR_YELLOW, COLOR_RED);
+	init_pair(YELLOW_BLACK, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(WHITE_YELLOW, COLOR_WHITE, COLOR_YELLOW);
 }
 
+void PrintBaseScreen(void)
+{
 
-void PrintBaseScreen( void ) {
+	//
+	// Background Color
+	//
+	PrintWin(BaseScreen, bg, 23, 80, 0, 0, WHITE_BLUE, "");
 
+	//
+	// Base Screen
+	//
+	PrintWin(BaseScreen, logo, 1, 80, 0, 0, WHITE_RED,
+		 "Linux Firmware Debug Kit " LFDK_VERSION);
+	PrintWin(BaseScreen, copyright, 1, 32, 0, 48, WHITE_RED,
+		 "Merck Hung <merckhung@gmail.com>");
+	PrintWin(BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE,
+		 "(Q)uit (P)CI (M)emory (I)O CM(O)S");
 
-    //
-    // Background Color
-    //
-    PrintWin( BaseScreen, bg, 23, 80, 0, 0, WHITE_BLUE, "" );
-
-
-    //
-    // Base Screen
-    //
-    PrintWin( BaseScreen, logo, 1, 80, 0, 0, WHITE_RED, "Linux Firmware Debug Kit "LFDK_VERSION );
-    PrintWin( BaseScreen, copyright, 1, 32, 0, 48, WHITE_RED, "Merck Hung <merckhung@gmail.com>" );
-    PrintWin( BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE, "(Q)uit (P)CI (M)emory (I)O CM(O)S" );
-
-
-    update_panels();
-    doupdate();
+	update_panels();
+	doupdate();
 }
 
+int main(int argc, char **argv)
+{
 
-int main( int argc, char **argv ) {
+	char c, device[LFDK_MAX_PATH];
+	int i, fd, orig_fl;
 
-    char c, device[ LFDK_MAX_PATH ];
-    int i, fd, orig_fl;
-
-    struct tm *nowtime;
-    time_t timer;
-    int last_sec;
-
-
-    //
-    // Initialize & set default value
-    //
-    strncpy( device, LFDD_DEFAULT_PATH, LFDK_MAX_PATH );
-    strncpy( pciname, LFDK_DEFAULT_PCINAME, LFDK_MAX_PATH );
-
-
-    while( (c = getopt( argc, argv, "b:n:d:h" )) != EOF ) {
-
-        switch( c ) {
-        
-
-            //
-            // Change default path of device
-            //
-            case 'd' :
-
-                strncpy( device, optarg, LFDK_MAX_PATH );
-                break;
-
-            //
-            // Change default path of PCI name database
-            //
-            case 'n' :
-
-                strncpy( pciname, optarg, LFDK_MAX_PATH );
-                break;
-
-            case 'b' :
-
-                maxpcibus = atoi( optarg );
-                if( maxpcibus >= LFDK_MAX_PCIBUS ) {
-                
-                    fprintf( stderr, "Maximum PCI Bus value must be less than %d\n", LFDK_MAX_PCIBUS );
-                    return 1;
-                }
-                break;
-
-            case 'v' :
-                break;
-
-            case 'h' :
-            default:
-                usage();
-                return 1;
-        }
-    }
-
-
-    //
-    // Start communicate with LFDD I/O control driver
-	//
-    fd = open( device, O_RDWR );
-    if( fd < 0 ) {
-
-        fprintf( stderr, "Cannot open device: %s\n", device );
-        return 1;
-    }
-
+	struct tm *nowtime;
+	time_t timer;
+	int last_sec;
 
 	//
-    // Enable IO Permission
+	// Initialize & set default value
 	//
-    if( ioperm( LFDK_CMOS_IO_START, LFDK_CMOS_IO_END, 1 ) ) {
+	strncpy(device, LFDD_DEFAULT_PATH, LFDK_MAX_PATH);
+	strncpy(pciname, LFDK_DEFAULT_PCINAME, LFDK_MAX_PATH);
 
-        fprintf( stderr, "Failed to Execute ioperm()\n" );
-		close( fd );
+	while ((c = getopt(argc, argv, "b:n:d:h")) != EOF) {
+
+		switch (c) {
+
+		//
+		// Change default path of device
+		//
+		case 'd':
+
+			strncpy(device, optarg, LFDK_MAX_PATH);
+			break;
+
+		//
+		// Change default path of PCI name database
+		//
+		case 'n':
+
+			strncpy(pciname, optarg, LFDK_MAX_PATH);
+			break;
+
+		case 'b':
+
+			maxpcibus = atoi(optarg);
+			if (maxpcibus >= LFDK_MAX_PCIBUS) {
+
+				fprintf(stderr,
+					"Maximum PCI Bus value must be less "
+					"than %d\n",
+					LFDK_MAX_PCIBUS);
+				return 1;
+			}
+			break;
+
+		case 'v':
+			break;
+
+		case 'h':
+		default:
+			usage();
+			return 1;
+		}
+	}
+
+	//
+	// Start communicate with LFDD I/O control driver
+	//
+	fd = open(device, O_RDWR);
+	if (fd < 0) {
+
+		fprintf(stderr, "Cannot open device: %s\n", device);
 		return 1;
-    }
+	}
 
+	//
+	// Enable IO Permission
+	//
+	if (ioperm(LFDK_CMOS_IO_START, LFDK_CMOS_IO_END, 1)) {
 
-    //
-    // Ncurse start
-    //
-    initscr();
-    start_color();
-    cbreak();
-    noecho();
-    nodelay( stdscr, 1 );
-    keypad( stdscr, 1 );
-    curs_set( 0 );
+		fprintf(stderr, "Failed to Execute ioperm()\n");
+		close(fd);
+		return 1;
+	}
 
+	//
+	// Ncurse start
+	//
+	initscr();
+	start_color();
+	cbreak();
+	noecho();
+	nodelay(stdscr, 1);
+	keypad(stdscr, 1);
+	curs_set(0);
 
-    //
-    // Initialize color pairs for later use
-    //
-    InitColorPairs();
+	//
+	// Initialize color pairs for later use
+	//
+	InitColorPairs();
 
+	//
+	// Prepare Base Screen
+	//
+	PrintBaseScreen();
 
-    //
-    // Prepare Base Screen
-    //
-    PrintBaseScreen();
+	//
+	// Scan PCI devices
+	//
+	ScanPCIDevice(fd);
 
+	for (;;) {
 
-    //
-    // Scan PCI devices
-    //
-    ScanPCIDevice( fd );
+		ibuf = getch();
+		if ((ibuf == 'q') || (ibuf == 'Q')) {
 
+			//
+			// Exit when ESC pressed
+			//
+			break;
+		}
 
-    for( ; ; ) {
+		//
+		// Major function switch key binding
+		//
+		if ((ibuf == 'p') || (ibuf == 'P')) {
 
-
-        ibuf = getch();
-        if( (ibuf == 'q') || (ibuf == 'Q') ) {
-        
-            //
-            // Exit when ESC pressed
-            //
-            break;
-        }
-
-
-        //
-        // Major function switch key binding
-        //
-        if( (ibuf == 'p') || (ibuf == 'P') ) {
-
-            func = PCI_LIST_FUNC;
-            ClearPCIScreen();
-            ClearMemScreen(); 
-            ClearIOScreen();
-			ClearCmosScreen();
-            continue;
-        }
-        else if( (ibuf == 'm') || (ibuf == 'M') ) {
-        
-            enter_mem = 1;
-            func = MEM_SPACE_FUNC;
-            ClearPCIScreen();
-            ClearPCILScreen();
-            ClearIOScreen();
-			ClearCmosScreen();
-            continue;
-        }
-        else if( (ibuf == 'i') || (ibuf == 'I') ) {
-
-            enter_mem = 1;
-            func = IO_SPACE_FUNC;
-            ClearPCIScreen();
-            ClearPCILScreen();
-            ClearMemScreen();
-			ClearCmosScreen();
-            continue;
-        }
-        else if( (ibuf == 'o') || (ibuf == 'O') ) {
-
-            enter_mem = 1;
-            func = CMOS_SPACE_FUNC;
-            ClearPCIScreen();
-            ClearPCILScreen();
-            ClearMemScreen();
-			ClearIOScreen();
-            continue;
-        }
-/*
-        else if( ibuf == '2' ) {
-
-            enter_mem = 1;
-            func = I2C_SPACE_FUNC;
-            ClearPCIScreen();
-            ClearPCILScreen();
-            ClearMemScreen();
+			func = PCI_LIST_FUNC;
+			ClearPCIScreen();
+			ClearMemScreen();
 			ClearIOScreen();
 			ClearCmosScreen();
-            continue;
-        }
-*/
+			continue;
+		} else if ((ibuf == 'm') || (ibuf == 'M')) {
 
+			enter_mem = 1;
+			func = MEM_SPACE_FUNC;
+			ClearPCIScreen();
+			ClearPCILScreen();
+			ClearIOScreen();
+			ClearCmosScreen();
+			continue;
+		} else if ((ibuf == 'i') || (ibuf == 'I')) {
 
-        //
-        // Update timer
-        //
-        time( &timer );
-        nowtime = localtime( &timer );
-        last_sec = nowtime->tm_sec;
+			enter_mem = 1;
+			func = IO_SPACE_FUNC;
+			ClearPCIScreen();
+			ClearPCILScreen();
+			ClearMemScreen();
+			ClearCmosScreen();
+			continue;
+		} else if ((ibuf == 'o') || (ibuf == 'O')) {
 
+			enter_mem = 1;
+			func = CMOS_SPACE_FUNC;
+			ClearPCIScreen();
+			ClearPCILScreen();
+			ClearMemScreen();
+			ClearIOScreen();
+			continue;
+		}
+		/*
+			else if( ibuf == '2' ) {
 
-        // Skip redundant update of timer
-        if( last_sec == nowtime->tm_sec ) {
+			    enter_mem = 1;
+			    func = I2C_SPACE_FUNC;
+			    ClearPCIScreen();
+			    ClearPCILScreen();
+			    ClearMemScreen();
+					ClearIOScreen();
+					ClearCmosScreen();
+			    continue;
+			}
+		*/
 
-            PrintFixedWin( BaseScreen, time, 1, 8, 23, 71, BLACK_WHITE, "%2.2d:%2.2d:%2.2d", nowtime->tm_hour, nowtime->tm_min,  nowtime->tm_sec );
-        }
+		//
+		// Update timer
+		//
+		time(&timer);
+		nowtime = localtime(&timer);
+		last_sec = nowtime->tm_sec;
 
+		// Skip redundant update of timer
+		if (last_sec == nowtime->tm_sec) {
 
-        //
-        // Major Functions
-        //
-        switch( func ) {
-        
-            case PCI_DEVICE_FUNC:
+			PrintFixedWin(BaseScreen, time, 1, 8, 23, 71,
+				      BLACK_WHITE, "%2.2d:%2.2d:%2.2d",
+				      nowtime->tm_hour, nowtime->tm_min,
+				      nowtime->tm_sec);
+		}
 
-                PrintPCIScreen( fd );
-                break;
+		//
+		// Major Functions
+		//
+		switch (func) {
 
-            case PCI_LIST_FUNC:
+		case PCI_DEVICE_FUNC:
 
-                PrintPCILScreen();
-                break;
+			PrintPCIScreen(fd);
+			break;
 
-            case MEM_SPACE_FUNC:
+		case PCI_LIST_FUNC:
 
-                PrintMemScreen( fd );
-                break;
+			PrintPCILScreen();
+			break;
 
-            case IO_SPACE_FUNC:
+		case MEM_SPACE_FUNC:
 
-                PrintIOScreen( fd );
-                break;
+			PrintMemScreen(fd);
+			break;
 
-			case CMOS_SPACE_FUNC:
+		case IO_SPACE_FUNC:
 
-				PrintCmosScreen( fd );
-				break;
+			PrintIOScreen(fd);
+			break;
 
-			case I2C_SPACE_FUNC:
+		case CMOS_SPACE_FUNC:
 
-				PrintCmosScreen( fd );
-				break;
+			PrintCmosScreen(fd);
+			break;
 
-            default:
-                break;
-        } 
+		case I2C_SPACE_FUNC:
 
+			PrintCmosScreen(fd);
+			break;
 
-        //
-        // Refresh Screen
-        //
-        update_panels();
-        doupdate();
+		default:
+			break;
+		}
 
+		//
+		// Refresh Screen
+		//
+		update_panels();
+		doupdate();
 
-        usleep( 1000 );
-    }
+		usleep(1000);
+	}
 
+	endwin();
+	close(fd);
 
-    endwin();
-    close( fd );
+	fprintf(stderr, "\n");
+	usage();
 
-
-    fprintf( stderr, "\n" );
-    usage();
-
-
-    return 0;
+	return 0;
 }
-
-

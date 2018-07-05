@@ -14,14 +14,14 @@
  * GNU General Public License for more details.
  *
  */
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <ncurses.h>
 #include <panel.h>
@@ -29,10 +29,8 @@
 #include "../lfdd/lfdd.h"
 #include "lfdk.h"
 
-
 MemPanel IOScreen;
 struct lfdd_io_t lfdd_io_data;
-
 
 extern int x, y;
 extern int input;
@@ -41,352 +39,327 @@ extern int ibuf;
 extern char wbuf;
 extern char enter_mem;
 
-
 unsigned int ioaddr = 0;
 
+void WriteIOByteValue(fd)
+{
 
-void WriteIOByteValue( fd ) {
+	lfdd_io_data.addr = ioaddr + x * LFDK_BYTE_PER_LINE + y;
+	lfdd_io_data.buf = wbuf;
 
-
-    lfdd_io_data.addr = ioaddr + x * LFDK_BYTE_PER_LINE + y;
-    lfdd_io_data.buf = wbuf;
-
-    LFDD_IOCTL( fd, LFDD_IO_WRITE_BYTE, lfdd_io_data );
+	LFDD_IOCTL(fd, LFDD_IO_WRITE_BYTE, lfdd_io_data);
 }
 
+void ClearIOScreen()
+{
 
-void ClearIOScreen() {
-
-    DestroyWin( IOScreen, offset );
-    DestroyWin( IOScreen, info );
-    DestroyWin( IOScreen, value );
-    DestroyWin( IOScreen, ascii );
+	DestroyWin(IOScreen, offset);
+	DestroyWin(IOScreen, info);
+	DestroyWin(IOScreen, value);
+	DestroyWin(IOScreen, ascii);
 }
 
+void PrintIOScreen(int fd)
+{
 
-void PrintIOScreen( int fd ) {
+	int i, j;
+	char tmp;
 
-    int i, j;
-    char tmp;
+	if (enter_mem) {
 
+		if (ibuf == 0x0a) {
 
-    if( enter_mem ) {
+			enter_mem = 0;
+			return;
+		} else if (((ibuf >= '0') && (ibuf <= '9')) ||
+			   ((ibuf >= 'a') && (ibuf <= 'f')) ||
+			   ((ibuf >= 'A') && (ibuf <= 'F'))) {
 
+			ioaddr <<= 4;
+			ioaddr &= 0xffff;
 
-        if( ibuf == 0x0a ) {
+			if (ibuf <= '9') {
 
-            enter_mem = 0;
-            return;
-        }
-        else if ( ((ibuf >= '0') && (ibuf <= '9'))
-                || ((ibuf >= 'a') && (ibuf <= 'f'))
-                || ((ibuf >= 'A') && (ibuf <= 'F')) ) {
+				ioaddr |= (unsigned int)(ibuf - 0x30);
+			} else if (ibuf > 'F') {
 
+				ioaddr |= (unsigned int)(ibuf - 0x60 + 9);
+			} else {
 
-            ioaddr <<= 4;
-            ioaddr &= 0xffff;
+				ioaddr |= (unsigned int)(ibuf - 0x40 + 9);
+			}
+		}
 
-            if( ibuf <= '9' ) {
+	} else {
 
-                ioaddr |= (unsigned int)(ibuf - 0x30);
-            }
-            else if( ibuf > 'F' ) {
+		if (ibuf == KEY_UP) {
 
-                ioaddr |= (unsigned int)(ibuf - 0x60 + 9);
-            }
-            else {
+			if (x > 0) {
 
-                ioaddr |= (unsigned int)(ibuf - 0x40 + 9);
-            }
-        }
+				x--;
+			}
 
+			input = 0;
+		} else if (ibuf == KEY_DOWN) {
 
-    }
-    else {
+			if (x < 15) {
 
-        if( ibuf == KEY_UP ) {
+				x++;
+			}
 
-            if( x > 0 ) {
+			input = 0;
+		} else if (ibuf == KEY_LEFT) {
 
-                x--;
-            }
+			if (y > 0) {
 
-            input = 0;
-        }
-        else if( ibuf == KEY_DOWN ) {
+				y--;
+			}
 
-            if( x < 15 ) {
+			input = 0;
+		} else if (ibuf == KEY_RIGHT) {
 
-                x++;
-            }
+			if (y < 15) {
 
-            input = 0;
-        }
-        else if( ibuf == KEY_LEFT ) {
+				y++;
+			}
 
-            if( y > 0 ) {
+			input = 0;
+		} else if (ibuf == KEY_NPAGE) {
 
-                y--;
-            }
+			if ((0xffffffff - ioaddr) >= LFDD_MASSBUF_SIZE) {
 
-            input = 0;
-        }
-        else if( ibuf == KEY_RIGHT ) {
+				ioaddr += LFDD_MASSBUF_SIZE;
+			} else {
 
-            if( y < 15 ) {
+				ioaddr = 0;
+			}
 
-                y++;
-            }
+			input = 0;
+		} else if (ibuf == KEY_PPAGE) {
 
-            input = 0;
-        }
-        else if( ibuf == KEY_NPAGE ) {
+			if (ioaddr >= LFDD_MASSBUF_SIZE) {
 
-            if( (0xffffffff - ioaddr) >= LFDD_MASSBUF_SIZE ) {
-        
-                ioaddr += LFDD_MASSBUF_SIZE;
-            }
-            else {
-        
-                ioaddr = 0;
-            }
+				ioaddr -= LFDD_MASSBUF_SIZE;
+			} else {
 
-            input = 0;
-        }
-        else if( ibuf == KEY_PPAGE ) {
+				ioaddr = (0xffffffff - LFDD_MASSBUF_SIZE + 1);
+			}
 
-            if( ioaddr >= LFDD_MASSBUF_SIZE ) {
-        
-                ioaddr -= LFDD_MASSBUF_SIZE;
-            }
-            else {
-        
-                ioaddr = (0xffffffff - LFDD_MASSBUF_SIZE + 1);
-            }
+			input = 0;
+		} else if (ibuf == 0x0a) {
 
-            input = 0;
-        }
-        else if( ibuf == 0x0a ) {
+			if (input) {
 
-            if( input ) {
+				input = 0;
+				WriteIOByteValue(fd);
+			}
+		} else if (((ibuf >= '0') && (ibuf <= '9')) ||
+			   ((ibuf >= 'a') && (ibuf <= 'f')) ||
+			   ((ibuf >= 'A') && (ibuf <= 'F'))) {
 
-                input = 0;
-                WriteIOByteValue( fd );
-            }
-        }
-        else if ( ((ibuf >= '0') && (ibuf <= '9'))
-                || ((ibuf >= 'a') && (ibuf <= 'f'))
-                || ((ibuf >= 'A') && (ibuf <= 'F')) ) {
+			if (!input) {
 
-            if( !input ) {
+				wbuf = 0x00;
+				input = 1;
+			}
 
-                wbuf = 0x00;
-                input = 1;
-            }
+			wbuf <<= 4;
+			wbuf &= 0xf0;
 
+			if (ibuf <= '9') {
 
-            wbuf <<= 4;
-            wbuf &= 0xf0;
+				wbuf |= ibuf - 0x30;
+			} else if (ibuf > 'F') {
 
+				wbuf |= ibuf - 0x60 + 9;
+			} else {
 
-            if( ibuf <= '9' ) {
+				wbuf |= ibuf - 0x40 + 9;
+			}
+		}
+	}
 
-                wbuf |= ibuf - 0x30;
-            }
-            else if( ibuf > 'F' ) {
+	//
+	// Print Offset Text
+	//
+	PrintFixedWin(IOScreen, offset, 17, 52, 4, 1, RED_BLUE,
+		      "0000 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E "
+		      "0F0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n"
+		      "0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0");
 
-                wbuf |= ibuf - 0x60 + 9;
-            }
-            else {
+	//
+	// Print memory address
+	//
+	if (!IOScreen.info) {
 
-                wbuf |= ibuf - 0x40 + 9;
-            }
-        }
-    }
+		IOScreen.info = newwin(1, 47, 22, 0);
+		IOScreen.p_info = new_panel(IOScreen.info);
+	}
+	wbkgd(IOScreen.info, COLOR_PAIR(WHITE_BLUE));
+	wattrset(IOScreen.info, COLOR_PAIR(WHITE_BLUE) | A_BOLD);
+	mvwprintw(IOScreen.info, 0, 0, "Type: I/O Space Address:     ");
 
+	if (enter_mem) {
 
-    //
-    // Print Offset Text
-    //
-    PrintFixedWin( IOScreen, offset, 17, 52, 4, 1, RED_BLUE, "0000 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0" );
+		if (counter % 2) {
 
+			wattrset(IOScreen.info,
+				 COLOR_PAIR(YELLOW_RED) | A_BOLD);
+		} else {
 
-    //
-    // Print memory address
-    //
-    if( !IOScreen.info ) {
+			wattrset(IOScreen.info,
+				 COLOR_PAIR(YELLOW_BLACK) | A_BOLD);
+		}
 
-        IOScreen.info = newwin( 1, 47, 22, 0 );
-        IOScreen.p_info = new_panel( IOScreen.info );
-    }
-    wbkgd( IOScreen.info, COLOR_PAIR( WHITE_BLUE ) );
-    wattrset( IOScreen.info, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
-    mvwprintw( IOScreen.info, 0, 0, "Type: I/O Space Address:     " );
+		wprintw(IOScreen.info, "%4.4X", ioaddr);
 
+		counter++;
+	} else {
 
-    if( enter_mem ) {
-    
-        if( counter % 2 ) {
-                   
-            wattrset( IOScreen.info, COLOR_PAIR( YELLOW_RED ) | A_BOLD );
-        }
-        else {
-                   
-            wattrset( IOScreen.info, COLOR_PAIR( YELLOW_BLACK ) | A_BOLD );
-        }
-       
-        wprintw( IOScreen.info, "%4.4X", ioaddr );
-
-        counter++;
-    }
-    else {
-    
-        wattrset( IOScreen.info, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
-        wprintw( IOScreen.info, "%4.4X", ioaddr );
-    }
-
-    
-    wattrset( IOScreen.info, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
-    wprintw( IOScreen.info, "h" );
-    wattrset( IOScreen.info, A_NORMAL );
-
-
-    //
-    // Read memory space 256 bytes
-    //
-    if( enter_mem ) {
-
-        memset( lfdd_io_data.mass_buf, 0xff, LFDD_MASSBUF_SIZE );
-    }
-    else {
-
-        lfdd_io_data.addr = ioaddr;
-        LFDD_IOCTL( fd, LFDD_IO_READ_256BYTE, lfdd_io_data );
-    }
-
-
-    //
-    // Print ASCII content
-    //
-    if( !IOScreen.ascii ) {
-
-        IOScreen.ascii = newwin( 17, 16, 4, 58 );
-        IOScreen.p_ascii = new_panel( IOScreen.ascii );
-    }
-
-
-    wbkgd( IOScreen.ascii, COLOR_PAIR( CYAN_BLUE ) );
-    wattrset( IOScreen.ascii, COLOR_PAIR( CYAN_BLUE ) | A_BOLD );
-    mvwprintw( IOScreen.ascii, 0, 0, "" );
-
-    wprintw( IOScreen.ascii, "0123456789ABCDEF" );
-    for( i = 0 ; i < LFDK_BYTE_PER_LINE ; i++ ) {
-
-        for( j = 0 ; j < LFDK_BYTE_PER_LINE ; j++ ) {
-
-            tmp = ((unsigned char)lfdd_io_data.mass_buf[ (i * LFDK_BYTE_PER_LINE) + j ]);
-            if( (tmp >= '!') && (tmp <= '~') ) {
-            
-                wprintw( IOScreen.ascii, "%c", tmp );
-            }
-            else {
-
-                wprintw( IOScreen.ascii, "." ); 
-            }
-        }
-    }
-
-    wattrset( IOScreen.ascii, A_NORMAL );
-
-
-    //
-    // Print 256bytes content
-    //
-    if( !IOScreen.value ) {
-
-        IOScreen.value = newwin( 17, 47, 5, 6 );
-        IOScreen.p_value = new_panel( IOScreen.value );
-    }
-
-
-    wbkgd( IOScreen.value, COLOR_PAIR( WHITE_BLUE ) );
-    mvwprintw( IOScreen.value, 0, 0, "" );
-
-
-    for( i = 0 ; i < LFDK_BYTE_PER_LINE ; i++ ) {
-
-        for( j = 0 ; j < LFDK_BYTE_PER_LINE ; j++ ) {
-    
-                
-            //
-            // Change Color Pair
-            //
-            if( y == j && x == i ) {
-              
-                if( input ) {
-                
-                    if( counter % 2 ) {
-                    
-                        wattrset( IOScreen.value, COLOR_PAIR( YELLOW_RED ) | A_BOLD );
-                    }
-                    else {
-                    
-                        wattrset( IOScreen.value, COLOR_PAIR( YELLOW_BLACK ) | A_BOLD );
-                    }
-                    
-                    counter++;
-                }
-                else {
-
-                    wattrset( IOScreen.value, COLOR_PAIR( BLACK_YELLOW ) | A_BOLD ); 
-                }
-            }
-            else if( ((unsigned char)lfdd_io_data.mass_buf[ (i * LFDK_BYTE_PER_LINE) + j ]) ) {
-           
-                wattrset( IOScreen.value, COLOR_PAIR( YELLOW_BLUE ) | A_BOLD );            
-            }
-            else {
-            
-                wattrset( IOScreen.value, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
-            }
-
-
-            //
-            // Handle input display
-            //
-            if( y == j && x == i ) {
-
-
-                if( input ) {
-                
-                    wprintw( IOScreen.value, "%2.2X", (unsigned char)wbuf );
-                }
-                else {
-                
-                    wprintw( IOScreen.value, "%2.2X", (unsigned char)lfdd_io_data.mass_buf[ (i * LFDK_BYTE_PER_LINE) + j ] );
-                }
-            }
-            else {
-
-                wprintw( IOScreen.value, "%2.2X", (unsigned char)lfdd_io_data.mass_buf[ (i * LFDK_BYTE_PER_LINE) + j ] );
-            }
-
-
-            //
-            // End of color pair
-            //
-            wattrset( IOScreen.value, A_NORMAL );
-
-
-            //
-            // Move to next byte
-            //
-            if( j != 15 ) {
-          
-                wprintw( IOScreen.value, " " );
-            }
-        }
-    }
+		wattrset(IOScreen.info, COLOR_PAIR(WHITE_BLUE) | A_BOLD);
+		wprintw(IOScreen.info, "%4.4X", ioaddr);
+	}
+
+	wattrset(IOScreen.info, COLOR_PAIR(WHITE_BLUE) | A_BOLD);
+	wprintw(IOScreen.info, "h");
+	wattrset(IOScreen.info, A_NORMAL);
+
+	//
+	// Read memory space 256 bytes
+	//
+	if (enter_mem) {
+
+		memset(lfdd_io_data.mass_buf, 0xff, LFDD_MASSBUF_SIZE);
+	} else {
+
+		lfdd_io_data.addr = ioaddr;
+		LFDD_IOCTL(fd, LFDD_IO_READ_256BYTE, lfdd_io_data);
+	}
+
+	//
+	// Print ASCII content
+	//
+	if (!IOScreen.ascii) {
+
+		IOScreen.ascii = newwin(17, 16, 4, 58);
+		IOScreen.p_ascii = new_panel(IOScreen.ascii);
+	}
+
+	wbkgd(IOScreen.ascii, COLOR_PAIR(CYAN_BLUE));
+	wattrset(IOScreen.ascii, COLOR_PAIR(CYAN_BLUE) | A_BOLD);
+	mvwprintw(IOScreen.ascii, 0, 0, "");
+
+	wprintw(IOScreen.ascii, "0123456789ABCDEF");
+	for (i = 0; i < LFDK_BYTE_PER_LINE; i++) {
+
+		for (j = 0; j < LFDK_BYTE_PER_LINE; j++) {
+
+			tmp = ((unsigned char)lfdd_io_data
+				   .mass_buf[(i * LFDK_BYTE_PER_LINE) + j]);
+			if ((tmp >= '!') && (tmp <= '~')) {
+
+				wprintw(IOScreen.ascii, "%c", tmp);
+			} else {
+
+				wprintw(IOScreen.ascii, ".");
+			}
+		}
+	}
+
+	wattrset(IOScreen.ascii, A_NORMAL);
+
+	//
+	// Print 256bytes content
+	//
+	if (!IOScreen.value) {
+
+		IOScreen.value = newwin(17, 47, 5, 6);
+		IOScreen.p_value = new_panel(IOScreen.value);
+	}
+
+	wbkgd(IOScreen.value, COLOR_PAIR(WHITE_BLUE));
+	mvwprintw(IOScreen.value, 0, 0, "");
+
+	for (i = 0; i < LFDK_BYTE_PER_LINE; i++) {
+
+		for (j = 0; j < LFDK_BYTE_PER_LINE; j++) {
+
+			//
+			// Change Color Pair
+			//
+			if (y == j && x == i) {
+
+				if (input) {
+
+					if (counter % 2) {
+
+						wattrset(
+						    IOScreen.value,
+						    COLOR_PAIR(YELLOW_RED) |
+							A_BOLD);
+					} else {
+
+						wattrset(
+						    IOScreen.value,
+						    COLOR_PAIR(YELLOW_BLACK) |
+							A_BOLD);
+					}
+
+					counter++;
+				} else {
+
+					wattrset(IOScreen.value,
+						 COLOR_PAIR(BLACK_YELLOW) |
+						     A_BOLD);
+				}
+			} else if (((unsigned char)lfdd_io_data
+					.mass_buf[(i * LFDK_BYTE_PER_LINE) +
+						  j])) {
+
+				wattrset(IOScreen.value,
+					 COLOR_PAIR(YELLOW_BLUE) | A_BOLD);
+			} else {
+
+				wattrset(IOScreen.value,
+					 COLOR_PAIR(WHITE_BLUE) | A_BOLD);
+			}
+
+			//
+			// Handle input display
+			//
+			if (y == j && x == i) {
+
+				if (input) {
+
+					wprintw(IOScreen.value, "%2.2X",
+						(unsigned char)wbuf);
+				} else {
+
+					wprintw(
+					    IOScreen.value, "%2.2X",
+					    (unsigned char)lfdd_io_data.mass_buf
+						[(i * LFDK_BYTE_PER_LINE) + j]);
+				}
+			} else {
+
+				wprintw(IOScreen.value, "%2.2X",
+					(unsigned char)lfdd_io_data
+					    .mass_buf[(i * LFDK_BYTE_PER_LINE) +
+						      j]);
+			}
+
+			//
+			// End of color pair
+			//
+			wattrset(IOScreen.value, A_NORMAL);
+
+			//
+			// Move to next byte
+			//
+			if (j != 15) {
+
+				wprintw(IOScreen.value, " ");
+			}
+		}
+	}
 }
-
-

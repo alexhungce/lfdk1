@@ -60,7 +60,7 @@ int ReadLine(int fd)
 
 	for (i = 0, tabs = 0; read(fd, &buf, 1);) {
 
-		if (buf == '#') {
+		if (i == 0 && buf == '#') {
 
 			/* Skip comment */
 			while (read(fd, &buf, 1) && (buf != '\n'))

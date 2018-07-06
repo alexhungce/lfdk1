@@ -15,7 +15,7 @@
  * GNU General Public License for more details.
  *
  */
-#define LFDD_VERSION "2.0.0"
+#define LFDD_VERSION "2.0.1"
 
 #define LFDD_DEFAULT_PATH "/dev/lfdd"
 #define LFDD_MASSBUF_SIZE 256

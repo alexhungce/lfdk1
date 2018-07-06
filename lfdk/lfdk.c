@@ -85,18 +85,12 @@ void InitColorPairs(void)
 void PrintBaseScreen(void)
 {
 
-	//
-	// Background Color
-	//
+	/* Background Color */
 	PrintWin(BaseScreen, bg, 23, 80, 0, 0, WHITE_BLUE, "");
 
-	//
-	// Base Screen
-	//
+	/* Base Screen */
 	PrintWin(BaseScreen, logo, 1, 80, 0, 0, WHITE_RED,
 		 "Linux Firmware Debug Kit " LFDK_VERSION);
-	PrintWin(BaseScreen, copyright, 1, 32, 0, 48, WHITE_RED,
-		 "Merck Hung <merckhung@gmail.com>");
 	PrintWin(BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE,
 		 "(Q)uit (P)CI (M)emory (I)O CM(O)S");
 

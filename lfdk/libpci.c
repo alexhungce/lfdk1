@@ -229,7 +229,7 @@ void ScanPCIDevice(int fd)
 	DestroyWin(PCILScreen, scan);
 }
 
-void WritePCIByteValue(fd)
+void WritePCIByteValue(int fd)
 {
 
 	lfdd_pci_data.bus = lfdd_pci_list[curr_index].bus;
@@ -510,7 +510,7 @@ void PrintPCIScreen(int fd)
 	}
 }
 
-void ClearPCILScreen(void)
+void ClearPCILScreen()
 {
 
 	DestroyWin(PCILScreen, title);
@@ -518,7 +518,7 @@ void ClearPCILScreen(void)
 	DestroyWin(PCILScreen, vendev);
 }
 
-void PrintPCILScreen(void)
+void PrintPCILScreen()
 {
 
 	int i;

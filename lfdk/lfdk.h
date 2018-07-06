@@ -184,3 +184,15 @@ typedef struct {
 	unsigned char devtxt[LFDK_MAX_PCINAME + 1];
 
 } PCIData;
+
+void ScanPCIDevice(int fd);
+void ClearPCIScreen();
+void ClearPCILScreen();
+void ClearMemScreen();
+void ClearIOScreen();
+void ClearCmosScreen();
+void PrintPCIScreen(int fd);
+void PrintPCILScreen();
+void PrintMemScreen(int fd);
+void PrintIOScreen(int fd);
+void PrintCmosScreen();

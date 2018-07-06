@@ -2,7 +2,8 @@
  * LFDK - Linux Firmware Debug Kit
  * File: libpci.c
  *
- * Copyright (C) 2006 - 2010 Merck Hung <merckhung@gmail.com>
+ * Copyright (C) 2006 - 2018 Merck Hung <merckhung@gmail.com>
+ * Copyright (C) 2018 Alex Hung <alex.hung@canonical.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
